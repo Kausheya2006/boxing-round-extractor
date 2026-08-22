@@ -10,9 +10,9 @@
 so start-time : min(t1, t2), end-time : max(t'1, t'2)
 
 
-## Still issues : 
+## Resolved issues : 
 
-### Fight4 round 4
+### Fight4 round 4  [RESOLVED]
 
 actual start-time : 16:04   predicted start-time : 16:11
 
@@ -32,13 +32,13 @@ But if I remove this "size=1 reject" logic, I miss the point of removing OCR-hal
 #### Suggestive fix : use 250 samples  -> more time-consuming
 
 
-### Fight4 round 5 
+### Fight4 round 5  [RESOLVED]
 
 actual end-time : 19:32  predicted end-time : 19:14
 
 Pause happened close to end, so no sample was captured.
 
-### Other issue : full round in case of KO is captured (3 minutes)
+### Other issue : full round in case of KO is captured (3 minutes)  [RESOLVED]
 
 #### Why not just use audio for unverified timestamps?
 
@@ -46,3 +46,7 @@ there are cases where clap model creates array [F, F, ..., F] even when there wa
 
 What if we stretch over till start of next round? : we wont know the actual start time of next round r+1 until it is not verified by audio.
 So when we are at round r, we have not verified r+1, so we cant rely on next round start time.
+
+## New issues : 
+
+- Audio model has +-1 sec issue. Not performing that well.
