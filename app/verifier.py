@@ -72,7 +72,9 @@ def predict(audio_path, verbose=False, log_cb=None):
 def verify_rounds(video_path, round_extract_lists, log_cb=None, check_cancel=None):
     from pathlib import Path
     video_stem = Path(video_path).stem
-    temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"temp_audio_{video_stem}")
+    temp_dir = f"assets/temp_audio_{video_stem}"
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
     
     if log_cb: log_cb(f"Starting verification of {len(round_extract_lists)} timestamps...")
     verified_timestamps = []
