@@ -78,9 +78,10 @@ def verify_rounds(video_path, round_extract_lists, log_cb=None, check_cancel=Non
     
     if log_cb: log_cb(f"Starting verification of {len(round_extract_lists)} timestamps...")
     verified_timestamps = []
+    last_event_sec = -999
     
     # We will test offsets from -3 to +3 seconds
-    offsets = [-3, -2, -1, 0, 1, 2, 3]
+    offsets = [-5,-4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
 
     for idx, t_str in enumerate(round_extract_lists):
         round_num = (idx // 2) + 1
@@ -103,6 +104,11 @@ def verify_rounds(video_path, round_extract_lists, log_cb=None, check_cancel=Non
 
             start_time = t_sec + offset
             if start_time < 0: start_time = 0
+            
+            # Prevent intersection with the previous bell (a bell rings for ~3 seconds)
+            if idx > 0 and start_time <= last_event_sec + 3:
+                predictions.append(False)
+                continue
 
             temp_audio = f"{temp_dir}/temp_window_{idx}_{offset}.wav"
             if not os.path.exists(temp_dir):
@@ -147,5 +153,7 @@ def verify_rounds(video_path, round_extract_lists, log_cb=None, check_cancel=Non
             verified_timestamps.append(f"{sec_to_time(verified_sec)} (Unverified)")
         else:
             verified_timestamps.append(sec_to_time(verified_sec))
+            
+        last_event_sec = verified_sec
 
     return verified_timestamps

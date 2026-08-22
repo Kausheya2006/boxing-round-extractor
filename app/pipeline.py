@@ -4,7 +4,7 @@ from app.verifier import verify_rounds
 
 def extract_rounds_from_video(video_path: str, reuse_debug_log=False, log_cb=None, check_cancel=None) -> dict:
     extractor = RoundExtractor(video_path)
-    result = extractor.run(reuse_debug_log=reuse_debug_log, log_cb=log_cb, check_cancel=check_cancel)
+    result = extractor.run(num_samples=250, reuse_debug_log=reuse_debug_log, log_cb=log_cb, check_cancel=check_cancel)
     
     if not result:
         raise Exception("Failed to extract rounds. Ensure the video is a valid boxing match.")
