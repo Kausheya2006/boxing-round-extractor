@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boxing Round Detector</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #0b0b0d;
+            color: #f5f5f5;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 900px;
+            margin: 70px auto;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: #151518;
+            border: 1px solid #29292d;
+            border-radius: 14px;
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #0d0d0f;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #e63946;
+        }
+
+        button {
+            padding: 0 22px;
+            border: none;
+            border-radius: 8px;
+            background: #e63946;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            height: 45px;
+        }
+
+        button:hover {
+            background: #d62f3d;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .hint {
+            margin-top: 12px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 14px;
+            border-radius: 8px;
+            background: #1e1e22;
+            display: none;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .recent-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .chip {
+            background: #252529;
+            color: #ccc;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #333;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            background: #3a3a40;
+            color: white;
+            border-color: #555;
+        }
+
+        .results {
+            margin-top: 35px;
+            display: none;
+        }
+
+        .results h2 {
+            margin-bottom: 5px;
+        }
+
+        .round-count {
+            color: #777;
+            margin-bottom: 18px;
+        }
+
+        .round {
+            display: flex;
+            align-items: center;
+            background: #151518;
+            border: 1px solid #29292d;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 8px;
+        }
+
+        .round-number {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #252529;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-right: 25px;
+        }
+
+        .time {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .time span {
+            font-size: 10px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .time strong {
+            font-size: 16px;
+        }
+
+        .arrow {
+            margin: 0 25px;
+            color: #666;
+        }
+
+        .duration {
+            margin-left: auto;
+            color: #888;
+            font-size: 13px;
+        }
+
+        .log-terminal {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            height: 250px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 13px;
+            color: white;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 650px) {
+            .input-row {
+                flex-direction: column;
+            }
+
+            .round {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Boxing Round Extractor</h1>
+
+    <p class="subtitle">
+        Detect the start and end of every boxing round from a video.
+    </p>
+
+    <div class="card">
+        <label for="videoPath">Video file path</label>
+        <div class="input-row">
+            <input id="videoPath" type="text" placeholder="/Users/yourname/Videos/boxing.mp4">
+            <button id="analyzeButton" onclick="analyzeVideo()">Extract Rounds</button>
+            <button id="cancelAnalyzeButton" style="display:none; background: #ff4757;" onclick="cancelTask('cancelAnalyzeButton')">Cancel</button>
+        </div>
+        <div style="margin-top: 15px; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="reuseDebug" style="flex: none; width: 16px; height: 16px; margin: 0; cursor: pointer;">
+            <label for="reuseDebug" style="margin: 0; font-weight: normal; cursor: pointer; color: #ccc;">Reuse OCR Log (Fast Debug)</label>
+        </div>
+        <div class="hint">The video is processed directly from your local filesystem. It is not uploaded.</div>
+        <div id="recentLabel" style="font-size: 13px; color: #888; margin-top: 20px; display: none;">Recently Used Inputs:</div>
+        <div id="recentVideosContainer" class="recent-chips" style="margin-top: 5px;"></div>
+        <div id="status" class="status"></div>
+    </div>
+
+    <div class="card">
+        <label>Server Logs</label>
+        <div id="logContainer" class="log-terminal">
+            <div style="color: #666;">--- Connection Established ---</div>
+        </div>
+    </div>
+
+    <div id="results" class="results">
+        <h2>Detected Rounds</h2>
+        <div id="roundCount" class="round-count"></div>
+        <div id="roundList"></div>
+        <div id="verifyContainer" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #333; display: none;">
+            <p style="margin-bottom: 15px; color: #aaa;">Do you want to continue with audio verification to increase accuracy?</p>
+            <div style="display: flex; gap: 10px;">
+                <button id="verifyButton" onclick="verifyVideo()" style="background: #2b7a4b;">Verify with Audio</button>
+                <button id="cancelVerifyButton" style="display:none; background: #ff4757;" onclick="cancelTask('cancelVerifyButton')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="config.js"></script>
+<script>
+
+let currentVideoPath = "";
+let currentExtrapolatedRounds = [];
+
+// Initialize WebSocket for logs
+const wsUrl = BACKEND_URL.replace("http", "ws") + "/ws/logs";
+const ws = new WebSocket(wsUrl);
+
+ws.onmessage = (event) => {
+    const logContainer = document.getElementById("logContainer");
+    const div = document.createElement("div");
+    div.innerText = event.data;
+    logContainer.appendChild(div);
+    logContainer.scrollTop = logContainer.scrollHeight;
+};
+
+ws.onclose = () => {
+    const logContainer = document.getElementById("logContainer");
+    const div = document.createElement("div");
+    div.style.color = "#ff6b6b";
+    div.innerText = "--- WebSocket Connection Closed ---";
+    logContainer.appendChild(div);
+};
+
+function formatTime(seconds) {
+    seconds = Math.floor(seconds);
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return String(minutes).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+}
+
+function displayRounds(rounds, verified=false, originalRounds=null) {
+    const results = document.getElementById("results");
+    const roundCount = document.getElementById("roundCount");
+    const roundList = document.getElementById("roundList");
+
+    results.style.display = "block";
+    roundCount.innerText = `${rounds.length / 2} round${(rounds.length/2) !== 1 ? "s" : ""} ${verified ? "verified" : "extracted"}`;
+    roundList.innerHTML = "";
+
+    for (let i = 0; i < rounds.length; i += 2) {
+        const startStr = rounds[i];
+        const endStr = rounds[i+1];
+        
+        // basic string parsing to show MM:SS format
+        const roundNum = (i / 2) + 1;
+
+        let diffStartHtml = "";
+        let diffEndHtml = "";
+        
+        if (verified && originalRounds && originalRounds.length > i + 1) {
+            let oldStart = originalRounds[i];
+            let oldEnd = originalRounds[i+1];
+            
+            function toSec(str) {
+                let cleanStr = str.replace(" (Unverified)", "");
+                let parts = cleanStr.split(':');
+                return parseInt(parts[0])*60 + parseInt(parts[1]);
+            }
+            
+            let diffStart = toSec(startStr) - toSec(oldStart);
+            if (diffStart !== 0) {
+                let sign = diffStart > 0 ? "+" : "";
+                diffStartHtml = `<span style="color: #fca311; font-size: 11px; margin-top: 3px; font-weight:bold;">${sign}${diffStart}s</span>`;
+            } else {
+                diffStartHtml = `<span style="color: #6b8068; font-size: 11px; margin-top: 3px; font-weight:bold;">Exact</span>`;
+            }
+            
+            let diffEnd = toSec(endStr) - toSec(oldEnd);
+            if (diffEnd !== 0) {
+                let sign = diffEnd > 0 ? "+" : "";
+                diffEndHtml = `<span style="color: #fca311; font-size: 11px; margin-top: 3px; font-weight:bold;">${sign}${diffEnd}s</span>`;
+            } else {
+                diffEndHtml = `<span style="color: #6b8068; font-size: 11px; margin-top: 3px; font-weight:bold;">Exact</span>`;
+            }
+        }
+
+        const element = document.createElement("div");
+        element.className = "round";
+
+        element.innerHTML = `
+            <div class="round-number">${roundNum}</div>
+            <div class="time" style="align-items: center;">
+                <span>START</span>
+                <strong>${startStr}</strong>
+                ${diffStartHtml}
+            </div>
+            <div class="arrow">→</div>
+            <div class="time" style="align-items: center;">
+                <span>END</span>
+                <strong>${endStr}</strong>
+                ${diffEndHtml}
+            </div>
+            <div class="duration" style="display:flex; flex-direction:column; align-items:flex-end;">
+                <div>${verified ? "Verified ✓" : "Extracted"}</div>
+            </div>
+        `;
+        roundList.appendChild(element);
+    }
+}
+
+async function checkCache(path) {
+    try {
+        const response = await fetch(`${BACKEND_URL}/check_cache`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ video_path: path })
+        });
+        if (response.ok) {
+            return await response.json();
+        }
+    } catch(e) {}
+    return { extract_exists: false, verify_exists: false };
+}
+
+async function loadRecentVideos() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/recent_videos`);
+        if (response.ok) {
+            const data = await response.json();
+            const container = document.getElementById("recentVideosContainer");
+            const label = document.getElementById("recentLabel");
+            container.innerHTML = "";
+            
+            if (data.recent_videos && data.recent_videos.length > 0) {
+                label.style.display = "block";
+                data.recent_videos.forEach(path => {
+                    const chip = document.createElement("div");
+                    chip.className = "chip";
+                    const filename = path.split('/').pop().split('\\').pop();
+                    chip.innerText = filename;
+                    chip.title = path;
+                    chip.onclick = () => {
+                        document.getElementById("videoPath").value = path;
+                    };
+                    container.appendChild(chip);
+                });
+            } else {
+                label.style.display = "none";
+            }
+        }
+    } catch(e) {
+        console.error("Failed to load recent videos", e);
+    }
+}
+
+// Load on page startup
+loadRecentVideos();
+
+async function cancelTask(cancelBtnId) {
+    const path = document.getElementById("videoPath").value.trim();
+    if (!path) return;
+    
+    const cancelBtn = document.getElementById(cancelBtnId);
+    if(cancelBtn) {
+        cancelBtn.disabled = true;
+        cancelBtn.innerText = "Cancelling...";
+    }
+
+    try {
+        await fetch(`${BACKEND_URL}/cancel`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ video_path: path })
+        });
+    } catch(e) {
+        console.error("Cancel failed", e);
+    }
+}
+
+async function analyzeVideo() {
+    const path = document.getElementById("videoPath").value.trim();
+    const button = document.getElementById("analyzeButton");
+    const status = document.getElementById("status");
+    const results = document.getElementById("results");
+    const verifyButton = document.getElementById("verifyButton");
+
+    if (!path) {
+        status.style.display = "block";
+        status.className = "status error";
+        status.innerText = "Please enter a video path.";
+        return;
+    }
+
+    let force = true;
+    let reuseDebug = document.getElementById("reuseDebug") ? document.getElementById("reuseDebug").checked : false;
+    const cache = await checkCache(path);
+    if (cache.extract_exists) {
+        if (confirm("Cached extraction found for this video. Do you want to load the previous results? (Click Cancel to re-extract via OCR)")) {
+            force = false;
+        }
+    }
+
+    button.disabled = true;
+    button.innerText = "Extracting...";
+    
+    const cancelBtn = document.getElementById("cancelAnalyzeButton");
+    cancelBtn.style.display = "inline-block";
+    
+    verifyButton.disabled = false;
+    verifyButton.innerText = "Verify with Audio";
+    document.getElementById("verifyContainer").style.display = "block";
+
+    status.style.display = "block";
+    status.className = "status";
+    status.innerText = force ? "Processing OCR extraction. Check logs for details..." : "Loading extraction from cache...";
+
+    results.style.display = "none";
+    document.getElementById("logContainer").innerHTML = '<div style="color: #666;">--- New Extraction Started ---</div>';
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/extract`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ video_path: path, force: force, reuse_debug: reuseDebug })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to process video.");
+        }
+
+        currentVideoPath = path;
+        currentExtrapolatedRounds = data.extrapolated_rounds;
+        
+        displayRounds(currentExtrapolatedRounds, false);
+        status.style.display = "none";
+
+    } catch (error) {
+        status.style.display = "block";
+        status.className = "status error";
+        status.innerText = error.message;
+    } finally {
+        button.disabled = false;
+        button.innerText = "Extract Rounds";
+        const cancelBtn = document.getElementById("cancelAnalyzeButton");
+        cancelBtn.style.display = "none";
+        cancelBtn.disabled = false;
+        cancelBtn.innerText = "Cancel";
+        loadRecentVideos(); // Refresh the list with the newly added path
+    }
+}
+
+async function verifyVideo() {
+    const button = document.getElementById("verifyButton");
+    const status = document.getElementById("status");
+
+    document.getElementById('logContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    let force = true;
+    const cache = await checkCache(currentVideoPath);
+    if (cache.verify_exists) {
+        if (confirm("Cached audio verification found for this video. Do you want to load the previous results? (Click Cancel to re-run audio verification)")) {
+            force = false;
+        }
+    }
+
+    button.disabled = true;
+    button.innerText = "Verifying...";
+    
+    const cancelBtn = document.getElementById("cancelVerifyButton");
+    cancelBtn.style.display = "inline-block";
+    
+    status.style.display = "block";
+    status.className = "status";
+    status.innerText = force ? "Verifying with Audio. Check logs for details..." : "Loading verification from cache...";
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                video_path: currentVideoPath, 
+                extrapolated_rounds: currentExtrapolatedRounds,
+                force: force
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to verify video.");
+        }
+
+        displayRounds(data.verified_rounds, true, currentExtrapolatedRounds);
+        document.getElementById("verifyContainer").style.display = "none";
+        status.style.display = "none";
+
+    } catch (error) {
+        status.style.display = "block";
+        status.className = "status error";
+        status.innerText = error.message;
+        button.disabled = false;
+        button.innerText = "Retry Verification";
+    } finally {
+        const cancelBtn = document.getElementById("cancelVerifyButton");
+        cancelBtn.style.display = "none";
+        cancelBtn.disabled = false;
+        cancelBtn.innerText = "Cancel";
+    }
+}
+
+</script>
+
+</body>
+</html>
