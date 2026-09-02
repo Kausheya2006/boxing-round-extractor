@@ -46,3 +46,18 @@ More samples are not always better.
 At **500 samples** (every ~7s), graphical glitches that stay on screen for 20 seconds will be scanned 3 times, forming a cluster of 3, which tricks the `size > 1` consensus check into accepting the hallucination.
 
 At **250 samples** (every ~14s), that same glitch is only scanned once. It forms a cluster of 1, which fails the consensus check and is instantly deleted. 250 samples acts as a natural low-pass filter, starving hallucinations of the votes they need to survive while true clock readings (on screen for 180s) easily survive.
+
+
+## Quick Start
+
+```sh
+cd Round_extract_web/
+uvicorn app.server:app --reload  # backend
+```
+
+```sh
+cd Round_extract_web/frontend
+python -m http.server 8080  # frontend
+```
+
+Open `http://localhost:8080` in your browser

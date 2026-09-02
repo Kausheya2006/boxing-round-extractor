@@ -80,7 +80,7 @@ def verify_rounds(video_path, round_extract_lists, log_cb=None, check_cancel=Non
     verified_timestamps = []
     last_event_sec = -999
     
-    # We will test offsets from -3 to +3 seconds
+    # We will test offsets from -5 to +5 seconds
     offsets = [-5,-4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
 
     for idx, t_str in enumerate(round_extract_lists):
