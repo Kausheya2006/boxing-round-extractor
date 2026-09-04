@@ -1,6 +1,6 @@
-from app.round_extract import RoundExtractor
+from app.extract.round_extract import RoundExtractor
 from app.__init__ import *
-from app.verifier import verify_rounds
+from app.extract.verifier import verify_rounds
 
 def extract_rounds_from_video(video_path: str, reuse_debug_log=False, log_cb=None, check_cancel=None) -> dict:
     extractor = RoundExtractor(video_path)

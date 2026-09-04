@@ -264,6 +264,56 @@
                 <button id="cancelVerifyButton" style="display:none; background: #ff4757;" onclick="cancelTask('cancelVerifyButton')">Cancel</button>
             </div>
         </div>
+        
+        <div id="momentsContainer" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #333; display: none;">
+            <p style="margin-bottom: 15px; color: #aaa;">Do you want to find key moments using Gemini Vision?</p>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                <input type="checkbox" id="reuseMoments" style="flex: none; width: 16px; height: 16px; margin: 0; cursor: pointer;" checked>
+                <label for="reuseMoments" style="margin: 0; font-weight: normal; cursor: pointer; color: #ccc;">Use Cached Results</label>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="momentsButton" onclick="findMoments()" style="background: #e6a839; color: black;">Find Key Moments</button>
+                <button id="cancelMomentsButton" style="display:none; background: #ff4757;" onclick="cancelTask('cancelMomentsButton')">Cancel</button>
+            </div>
+        </div>
+
+        <div id="momentsResults" style="margin-top: 25px; display: none;">
+            <h3>Key Moments</h3>
+            <div id="momentsList"></div>
+            
+            <div id="verifyMomentsContainer" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #333; display: none;">
+                <p style="margin-bottom: 15px; color: #aaa;">Do you want to visually verify the extracted moments to build the final database?</p>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <input type="checkbox" id="reuseVerifyMoments" style="flex: none; width: 16px; height: 16px; margin: 0; cursor: pointer;" checked>
+                    <label for="reuseVerifyMoments" style="margin: 0; font-weight: normal; cursor: pointer; color: #ccc;">Use Cached Verification</label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="verifyMomentsButton" onclick="verifyMomentsVisually()" style="background: #2b7a4b;">Verify Moments Visually</button>
+                    <button id="cancelVerifyMomentsButton" style="display:none; background: #ff4757;" onclick="cancelTask('cancelVerifyMomentsButton')">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="verifiedMomentsDatabase" style="margin-top: 35px; display: none;">
+            <h2>Verified Moments Database</h2>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; text-align: left;">
+                    <thead>
+                        <tr style="background: #252529; border-bottom: 1px solid #444;">
+                            <th style="padding: 12px; border: 1px solid #333;">Round</th>
+                            <th style="padding: 12px; border: 1px solid #333;">Time</th>
+                            <th style="padding: 12px; border: 1px solid #333;">Category</th>
+                            <th style="padding: 12px; border: 1px solid #333;">Status</th>
+                            <th style="padding: 12px; border: 1px solid #333;">Fighters</th>
+                            <th style="padding: 12px; border: 1px solid #333;">Attack</th>
+                            <th style="padding: 12px; border: 1px solid #333;">Reaction</th>
+                        </tr>
+                    </thead>
+                    <tbody id="databaseTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -273,6 +323,7 @@
 
 let currentVideoPath = "";
 let currentExtrapolatedRounds = [];
+let currentMoments = null;
 
 // Initialize WebSocket for logs
 const wsUrl = BACKEND_URL.replace("http", "ws") + "/ws/logs";
@@ -472,6 +523,8 @@ async function analyzeVideo() {
     verifyButton.disabled = false;
     verifyButton.innerText = "Verify with Audio";
     document.getElementById("verifyContainer").style.display = "block";
+    document.getElementById("momentsContainer").style.display = "block";
+    document.getElementById("momentsResults").style.display = "none";
 
     status.style.display = "block";
     status.className = "status";
@@ -555,6 +608,7 @@ async function verifyVideo() {
             throw new Error(data.detail || "Failed to verify video.");
         }
 
+        currentExtrapolatedRounds = data.verified_rounds;
         displayRounds(data.verified_rounds, true, currentExtrapolatedRounds);
         document.getElementById("verifyContainer").style.display = "none";
         status.style.display = "none";
@@ -572,6 +626,234 @@ async function verifyVideo() {
         cancelBtn.innerText = "Cancel";
     }
 }
+
+async function findMoments() {
+    const button = document.getElementById("momentsButton");
+    const status = document.getElementById("status");
+    const momentsResults = document.getElementById("momentsResults");
+    const momentsList = document.getElementById("momentsList");
+
+    document.getElementById('logContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    let force = !document.getElementById("reuseMoments").checked;
+    
+    const cache = await checkCache(currentVideoPath);
+    if (!force && cache.moments_exists) {
+        // use cache
+    } else {
+        force = true; // if checkbox is checked but no cache
+    }
+
+    button.disabled = true;
+    button.innerText = "Finding...";
+    
+    const cancelBtn = document.getElementById("cancelMomentsButton");
+    cancelBtn.style.display = "inline-block";
+    
+    status.style.display = "block";
+    status.className = "status";
+    status.innerText = force ? "Finding moments with Gemini. Check logs for details..." : "Loading moments from cache...";
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/find_moments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                video_path: currentVideoPath, 
+                rounds: currentExtrapolatedRounds,
+                force: force
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to find moments.");
+        }
+
+        momentsResults.style.display = "block";
+        momentsList.innerHTML = "";
+
+        const km = data.key_moments;
+        currentMoments = km;
+        
+        if(km) {
+            for (const [roundName, timestamps] of Object.entries(km)) {
+                const roundDiv = document.createElement("div");
+                roundDiv.style.marginBottom = "15px";
+                roundDiv.innerHTML = `<h4 style="margin-bottom: 5px; color: #e6a839;">${roundName}</h4>`;
+                
+                if (timestamps && timestamps.length > 0) {
+                    const ul = document.createElement("ul");
+                    ul.style.listStyleType = "none";
+                    ul.style.paddingLeft = "0";
+                    ul.style.marginTop = "0";
+                    
+                    timestamps.forEach(ts => {
+                        const li = document.createElement("li");
+                        li.style.background = "#252529";
+                        li.style.padding = "8px 12px";
+                        li.style.marginBottom = "5px";
+                        li.style.borderRadius = "6px";
+                        
+                        li.innerHTML = `<span>${ts}</span>`;
+                        ul.appendChild(li);
+                    });
+                    roundDiv.appendChild(ul);
+                } else {
+                    roundDiv.innerHTML += `<div style="color: #666; font-size: 13px;">No key moments detected.</div>`;
+                }
+                momentsList.appendChild(roundDiv);
+            }
+        }
+
+        status.style.display = "none";
+        
+        if (currentMoments && Object.keys(currentMoments).length > 0) {
+            document.getElementById("verifyMomentsContainer").style.display = "block";
+        }
+
+    } catch (error) {
+        status.style.display = "block";
+        status.className = "status error";
+        status.innerText = error.message;
+        button.disabled = false;
+        button.innerText = "Retry Finding Moments";
+    } finally {
+        button.disabled = false;
+        button.innerText = "Find Key Moments";
+        const cancelBtn = document.getElementById("cancelMomentsButton");
+        cancelBtn.style.display = "none";
+        cancelBtn.disabled = false;
+        cancelBtn.innerText = "Cancel";
+    }
+}
+
+async function verifyMomentsVisually() {
+    const button = document.getElementById("verifyMomentsButton");
+    const status = document.getElementById("status");
+    const dbContainer = document.getElementById("verifiedMomentsDatabase");
+    const dbBody = document.getElementById("databaseTableBody");
+    const momentsList = document.getElementById("momentsList");
+
+    document.getElementById('logContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    let force = !document.getElementById("reuseVerifyMoments").checked;
+
+    button.disabled = true;
+    button.innerText = "Verifying...";
+    
+    const cancelBtn = document.getElementById("cancelVerifyMomentsButton");
+    cancelBtn.style.display = "inline-block";
+    
+    status.style.display = "block";
+    status.className = "status";
+    status.innerText = force ? "Visually verifying moments with Gemini. Check logs for details..." : "Loading visual verifications from cache...";
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/verify_moments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                video_path: currentVideoPath, 
+                moments: currentMoments,
+                force: force
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to verify moments visually.");
+        }
+
+        const vm = data.verified_moments;
+        
+        // Re-render the momentsList to show checkmarks
+        momentsList.innerHTML = "";
+        dbBody.innerHTML = "";
+        let hasVerifiedData = false;
+
+        if(vm) {
+            for (const [roundName, items] of Object.entries(vm)) {
+                const roundDiv = document.createElement("div");
+                roundDiv.style.marginBottom = "15px";
+                roundDiv.innerHTML = `<h4 style="margin-bottom: 5px; color: #e6a839;">${roundName}</h4>`;
+                
+                if (items && items.length > 0) {
+                    const ul = document.createElement("ul");
+                    ul.style.listStyleType = "none";
+                    ul.style.paddingLeft = "0";
+                    ul.style.marginTop = "0";
+                    
+                    items.forEach(item => {
+                        // Render in Moments List
+                        const li = document.createElement("li");
+                        li.style.background = "#252529";
+                        li.style.padding = "8px 12px";
+                        li.style.marginBottom = "5px";
+                        li.style.borderRadius = "6px";
+                        li.style.display = "flex";
+                        li.style.justifyContent = "space-between";
+                        
+                        const verifyTag = item.verified 
+                            ? `<span style="color: #6b8068; font-weight: bold;">Verified ✓</span>` 
+                            : `<span style="color: #ff6b6b; font-weight: bold;">Rejected ✗</span>`;
+                            
+                        li.innerHTML = `<span>${item.timestamp}</span> ${verifyTag}`;
+                        ul.appendChild(li);
+                        
+                        // Render in Database
+                        if (item.verified) {
+                            hasVerifiedData = true;
+                            const tr = document.createElement("tr");
+                            tr.style.borderBottom = "1px solid #333";
+                            
+                            tr.innerHTML = `
+                                <td style="padding: 12px; border: 1px solid #333;">${roundName}</td>
+                                <td style="padding: 12px; border: 1px solid #333; font-weight: bold;">${item.timestamp}</td>
+                                <td style="padding: 12px; border: 1px solid #333;">${item.category || "-"}</td>
+                                <td style="padding: 12px; border: 1px solid #333;">${item.landed_status || "-"}</td>
+                                <td style="padding: 12px; border: 1px solid #333;">${item.attacker_vs_defender || "-"}</td>
+                                <td style="padding: 12px; border: 1px solid #333;">${item.attack_type || "-"}</td>
+                                <td style="padding: 12px; border: 1px solid #333;">${item.defender_reaction || "-"}</td>
+                            `;
+                            dbBody.appendChild(tr);
+                        }
+                    });
+                    roundDiv.appendChild(ul);
+                } else {
+                    roundDiv.innerHTML += `<div style="color: #666; font-size: 13px;">No key moments detected.</div>`;
+                }
+                momentsList.appendChild(roundDiv);
+            }
+        }
+        
+        if (hasVerifiedData) {
+            dbContainer.style.display = "block";
+        } else {
+            dbContainer.style.display = "none";
+        }
+
+        status.style.display = "none";
+        document.getElementById("verifyMomentsContainer").style.display = "none";
+
+    } catch (error) {
+        status.style.display = "block";
+        status.className = "status error";
+        status.innerText = error.message;
+        button.disabled = false;
+        button.innerText = "Retry Visual Verification";
+    } finally {
+        button.disabled = false;
+        button.innerText = "Verify Moments Visually";
+        const cancelBtn = document.getElementById("cancelVerifyMomentsButton");
+        cancelBtn.style.display = "none";
+        cancelBtn.disabled = false;
+        cancelBtn.innerText = "Cancel";
+    }
+}
+
 
 </script>
 

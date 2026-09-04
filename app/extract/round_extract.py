@@ -1,4 +1,3 @@
-import subprocess
 from app.__init__ import *
 
 _ocr_reader = None

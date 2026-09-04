@@ -1,10 +1,8 @@
-import os
-import subprocess
 import librosa
 import torch
 from transformers import ClapModel, ClapProcessor
 
-from app.config import model_id, get_device
+from app.config import AUDIO_MODEL, get_device
 from app.utils import candidate_labels, sec_to_time, time_to_sec
 from app.__init__ import *
 
@@ -23,8 +21,8 @@ def get_model(log_cb=None):
         cache_dir = os.path.join(base_dir, "assets", "models")
         os.makedirs(cache_dir, exist_ok=True)
         
-        _processor = ClapProcessor.from_pretrained(model_id, cache_dir=cache_dir)
-        _model = ClapModel.from_pretrained(model_id, cache_dir=cache_dir).to(device)
+        _processor = ClapProcessor.from_pretrained(AUDIO_MODEL, cache_dir=cache_dir)
+        _model = ClapModel.from_pretrained(AUDIO_MODEL, cache_dir=cache_dir).to(device)
         _model.eval()
         
         if log_cb: log_cb("Model loaded successfully.")

@@ -9,6 +9,12 @@ from pathlib import Path
 from typing import List, Optional
 
 from app.pipeline import extract_rounds_from_video, verify_extracted_rounds
+from app.find_moments.moments import find_key_moments_for_rounds
+from app.find_moments.verify_moments import verify_key_moments
+from app.config import get_device
+
+from dotenv import load_dotenv
+load_dotenv()
 
 app = FastAPI()
 
@@ -129,6 +135,21 @@ class VerifyRequest(BaseModel):
 class CacheCheckRequest(BaseModel):
     video_path: str
 
+class FindMomentsRequest(BaseModel):
+    video_path: str
+    rounds: list
+    force: bool = False
+
+class VerifyMomentsRequest(BaseModel):
+    video_path: str
+    moments: dict
+    force: bool = False
+
+class VerifyMomentsRequest(BaseModel):
+    video_path: str
+    moments: dict
+    force: bool = False
+
 class CancelRequest(BaseModel):
     video_path: str
 
@@ -142,11 +163,17 @@ def cancel_task(request: CancelRequest):
 
 @app.post("/check_cache")
 def check_cache(request: CacheCheckRequest):
+    video_stem = Path(request.video_path).stem
     extract_path = get_cache_path(request.video_path, "extracts")
-    verify_path = get_cache_path(request.video_path, "verified")
+    verified_path = get_cache_path(request.video_path, "verified")
+    moments_path = get_cache_path(request.video_path, "moments")
+    verified_moments_path = get_cache_path(request.video_path, "verified_moments")
+
     return {
         "extract_exists": os.path.exists(extract_path),
-        "verify_exists": os.path.exists(verify_path)
+        "verify_exists": os.path.exists(verified_path),
+        "moments_exists": os.path.exists(moments_path),
+        "verified_moments_exists": os.path.exists(verified_moments_path)
     }
 
 @app.get("/")
@@ -238,6 +265,79 @@ async def verify(request: VerifyRequest):
             status_code=500,
             detail=str(e)
         )
+    finally:
+        if video_path_str in cancel_events:
+            del cancel_events[video_path_str]
+
+@app.post("/find_moments")
+async def find_moments(request: FindMomentsRequest):
+    video_path = Path(request.video_path).expanduser()
+
+    if not video_path.exists() or not video_path.is_file():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Video file not found or invalid path: {video_path}"
+        )
+
+    cache_path = get_cache_path(str(video_path), "moments")
+    log_cb = get_log_cb(str(video_path))
+
+    if not request.force and os.path.exists(cache_path):
+        if log_cb: log_cb("Loading key moments from cache...")
+        with open(cache_path, 'r') as f:
+            return json.load(f)
+
+    video_path_str = str(video_path)
+    cancel_events[video_path_str] = threading.Event()
+    check_cancel = lambda: cancel_events.get(video_path_str) and cancel_events[video_path_str].is_set()
+
+    try:
+        results = await asyncio.to_thread(find_key_moments_for_rounds, video_path_str, request.rounds, log_cb, check_cancel)
+        data = {"key_moments": results}
+        with open(cache_path, 'w') as f:
+            json.dump(data, f)
+        if log_cb: log_cb("Saved key moments results to cache.")
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+    finally:
+        if video_path_str in cancel_events:
+            del cancel_events[video_path_str]
+
+@app.post("/verify_moments")
+async def verify_moments_endpoint(request: VerifyMomentsRequest):
+    video_path = Path(request.video_path).expanduser()
+    
+    if not video_path.exists() or not video_path.is_file():
+        raise HTTPException(status_code=400, detail="Video file not found.")
+
+    video_path_str = str(video_path)
+    cache_path = get_cache_path(video_path_str, "verified_moments")
+
+    log_cb = get_log_cb(video_path_str)
+    
+    if not request.force and os.path.exists(cache_path):
+        if log_cb: log_cb("Using cached visually verified moments.")
+        with open(cache_path, 'r') as f:
+            return json.load(f)
+
+    cancel_events[video_path_str] = threading.Event()
+    check_cancel = lambda: cancel_events.get(video_path_str) and cancel_events[video_path_str].is_set()
+
+    try:
+        results = await asyncio.to_thread(verify_key_moments, video_path_str, request.moments, log_cb, check_cancel)
+        data = {"verified_moments": results}
+        with open(cache_path, 'w') as f:
+            json.dump(data, f)
+        if log_cb: log_cb("Saved verified key moments results to cache.")
+        return data
+    except Exception as e:
+        if str(e) == "Cancelled by user":
+            raise HTTPException(status_code=499, detail="Task cancelled by user.")
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         if video_path_str in cancel_events:
             del cancel_events[video_path_str]
