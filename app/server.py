@@ -4,6 +4,7 @@ import os
 import threading
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pathlib import Path
 from typing import List, Optional
@@ -27,6 +28,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+assets_dir = os.path.join(base_dir, "assets")
+os.makedirs(assets_dir, exist_ok=True)
+app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
 class ConnectionManager:
     def __init__(self):
@@ -330,9 +335,31 @@ async def verify_moments_endpoint(request: VerifyMomentsRequest):
     try:
         results = await asyncio.to_thread(verify_key_moments, video_path_str, request.moments, log_cb, check_cancel)
         data = {"verified_moments": results}
+        
+        # Save as JSON
         with open(cache_path, 'w') as f:
             json.dump(data, f)
-        if log_cb: log_cb("Saved verified key moments results to cache.")
+            
+        # Also save as a clean CSV database
+        import csv
+        csv_path = cache_path.replace('.json', '.csv')
+        with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["Round", "Timestamp", "Verified", "Category", "Landed_Status", "Attacker_vs_Defender", "Attack_Type", "Defender_Reaction"])
+            for round_name, items in results.items():
+                for item in items:
+                    writer.writerow([
+                        round_name,
+                        item.get("timestamp", ""),
+                        item.get("verified", False),
+                        item.get("category", ""),
+                        item.get("landed_status", ""),
+                        item.get("attacker_vs_defender", ""),
+                        item.get("attack_type", ""),
+                        item.get("defender_reaction", "")
+                    ])
+                    
+        if log_cb: log_cb("Saved verified key moments to JSON and CSV database.")
         return data
     except Exception as e:
         if str(e) == "Cancelled by user":

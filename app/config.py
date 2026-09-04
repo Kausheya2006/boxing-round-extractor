@@ -30,19 +30,20 @@ If none occurred, reply: "No key moments detected."
 VERIFY_MOMENTS_MODEL = "models/gemini-3.1-pro-preview"
 
 VERIFY_MOMENTS_PROMPT = """
-Analyze this 2-second clip frame-by-frame. Work through these observation steps before giving a verdict:
+You must output all three numbered sections below. Do not skip directly to the final list.
 
-1. Frame Breakdown:
-- Attacker & Defender: Identify fighters by torso/shorts appearance.
-- Action: What punch or motion is thrown? (e.g., Left Hook, Straight Right, Clinch, None)
-- Contact: Did it land cleanly, hit the guard, or miss?
-- Defender Reaction: Did the defender's base stay firm, or did they fall, buckle knees, stumble, or get pinned against ropes?
-- Referee: Did the referee intervene, begin a count, or wave off the fight?
+### 1. Visual Evidence (Write out each point):
+- Attacker & Defender: [Identify by shorts/torso color]
+- Action: [Punch thrown or action taken]
+- Contact: [Clean hit / Hit guard / Complete miss]
+- Defender Base & Footing: [Did feet move? Did knees buckle, or was footing solid?]
+- Referee Action: [No action / Intervening / Counting / Waving off]
 
-2. Key Moment Assessment:
-- Based on the reaction above, does this qualify as a true Key Moment (Knockdown, Stoppage, Stagger/Hurt, or Pinned Flurry)?: [YES / NO]
+### 2. Verdict:
+- Is this an unambiguous Key Moment (Knockdown, Stoppage, Stagger/Hurt, or Pinned Flurry)?: [YES / NO]
 
-3. Final Output:
-If NO: [NO, null, null, null, null, null]
-If YES: [YES, "Category (2-3 words)", Landed_Status, "Attacker vs Defender", "Attack_Type", "Defender_Reaction"]
+### 3. Structured Data:
+Output this exact line at the very end:
+RESULT: [YES/NO, "Category", "Landed_Status", "Attacker vs Defender", "Attack_Type", "Defender_Reaction"]
+(If NO, output: RESULT: [NO, null, null, null, null, null])
 """

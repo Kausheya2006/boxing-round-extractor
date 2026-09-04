@@ -207,6 +207,154 @@
             white-space: pre-wrap;
         }
 
+        /* Collapsible Sections */
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: color 0.2s;
+            margin-bottom: 15px;
+        }
+
+        .collapsible:hover {
+            color: #fff;
+        }
+
+        .toggle-icon {
+            font-size: 14px;
+            color: #666;
+            transition: transform 0.3s;
+        }
+
+        .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .collapsible-content.collapsed {
+            display: none;
+        }
+
+        .preview-btn {
+            background: #3a3a42;
+            color: #eee;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .preview-btn:hover {
+            background: #4a4a52;
+            color: white;
+        }
+
+        /* Video Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: #151518;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            max-width: 90%;
+            width: 600px;
+            position: relative;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+            padding: 0;
+        }
+
+        .modal-close:hover {
+            color: white;
+            background: #333;
+        }
+
+        .modal-title {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            color: #e6a839;
+        }
+
+        .modal-video-container {
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 16 / 9;
+        }
+
+        .modal-video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Modern Table Styles */
+        .modern-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .modern-table th, .modern-table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #29292d;
+        }
+        .modern-table th { color: #777; }
+        .modern-table tr:hover { background: #1a1a1f; }
+
         @media (max-width: 650px) {
             .input-row {
                 flex-direction: column;
@@ -254,10 +402,11 @@
     </div>
 
     <div id="results" class="results">
-        <h2>Detected Rounds</h2>
-        <div id="roundCount" class="round-count"></div>
-        <div id="roundList"></div>
-        <div id="verifyContainer" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #333; display: none;">
+        <h2 class="collapsible" onclick="toggleSection('roundContent', this)">Detected Rounds <span class="toggle-icon">▼</span></h2>
+        <div id="roundContent" class="collapsible-content">
+            <div id="roundCount" class="round-count"></div>
+            <div id="roundList"></div>
+            <div id="verifyContainer" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #333; display: none;">
             <p style="margin-bottom: 15px; color: #aaa;">Do you want to continue with audio verification to increase accuracy?</p>
             <div style="display: flex; gap: 10px;">
                 <button id="verifyButton" onclick="verifyVideo()" style="background: #2b7a4b;">Verify with Audio</button>
@@ -276,12 +425,14 @@
                 <button id="cancelMomentsButton" style="display:none; background: #ff4757;" onclick="cancelTask('cancelMomentsButton')">Cancel</button>
             </div>
         </div>
+        </div> <!-- End roundContent -->
 
         <div id="momentsResults" style="margin-top: 25px; display: none;">
-            <h3>Key Moments</h3>
-            <div id="momentsList"></div>
-            
-            <div id="verifyMomentsContainer" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #333; display: none;">
+            <h3 class="collapsible" onclick="toggleSection('momentsContent', this)">Key Moments <span class="toggle-icon">▼</span></h3>
+            <div id="momentsContent" class="collapsible-content">
+                <div id="momentsList"></div>
+                
+                <div id="verifyMomentsContainer" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #333; display: none;">
                 <p style="margin-bottom: 15px; color: #aaa;">Do you want to visually verify the extracted moments to build the final database?</p>
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                     <input type="checkbox" id="reuseVerifyMoments" style="flex: none; width: 16px; height: 16px; margin: 0; cursor: pointer;" checked>
@@ -292,30 +443,49 @@
                     <button id="cancelVerifyMomentsButton" style="display:none; background: #ff4757;" onclick="cancelTask('cancelVerifyMomentsButton')">Cancel</button>
                 </div>
             </div>
-        </div>
+            </div> <!-- End momentsContent -->
+        </div> <!-- End momentsResults -->
 
-        <div id="verifiedMomentsDatabase" style="margin-top: 35px; display: none;">
-            <h2>Verified Moments Database</h2>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; text-align: left;">
+        <div id="verifiedMomentsDatabase" style="margin-top: 45px; display: none;">
+            <h2 class="collapsible" style="margin-bottom: 5px;" onclick="toggleSection('dbContent', this)">Verified Database <span class="toggle-icon">▼</span></h2>
+            <div id="dbContent" class="collapsible-content">
+                <p style="color: #888; font-size: 14px; margin-bottom: 20px;">Structured data extracted directly from video clip analysis.</p>
+                <div style="overflow-x: auto; padding-bottom: 20px;">
+                    <table class="modern-table">
                     <thead>
-                        <tr style="background: #252529; border-bottom: 1px solid #444;">
-                            <th style="padding: 12px; border: 1px solid #333;">Round</th>
-                            <th style="padding: 12px; border: 1px solid #333;">Time</th>
-                            <th style="padding: 12px; border: 1px solid #333;">Category</th>
-                            <th style="padding: 12px; border: 1px solid #333;">Status</th>
-                            <th style="padding: 12px; border: 1px solid #333;">Fighters</th>
-                            <th style="padding: 12px; border: 1px solid #333;">Attack</th>
-                            <th style="padding: 12px; border: 1px solid #333;">Reaction</th>
+                        <tr>
+                            <th>Round</th>
+                            <th>Time</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Fighters</th>
+                            <th>Attack</th>
+                            <th>Reaction</th>
+                            <th style="text-align: center;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="databaseTableBody">
                     </tbody>
                 </table>
             </div>
+            </div>
         </div>
     </div>
 
+</div>
+
+<!-- Video Preview Modal -->
+<div id="videoModal" class="modal-overlay" onclick="closeVideoModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeVideoModal()">&times;</button>
+        <h3 id="modalTitle" class="modal-title">Preview</h3>
+        <div class="modal-video-container">
+            <video id="modalVideo" controls autoplay muted playsinline>
+                <source id="modalVideoSource" src="" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
 </div>
 
 <script src="config.js"></script>
@@ -324,6 +494,19 @@
 let currentVideoPath = "";
 let currentExtrapolatedRounds = [];
 let currentMoments = null;
+
+function toggleSection(contentId, headerElement) {
+    const content = document.getElementById(contentId);
+    const icon = headerElement.querySelector('.toggle-icon');
+    
+    if (content.classList.contains('collapsed')) {
+        content.classList.remove('collapsed');
+        icon.classList.remove('collapsed');
+    } else {
+        content.classList.add('collapsed');
+        icon.classList.add('collapsed');
+    }
+}
 
 // Initialize WebSocket for logs
 const wsUrl = BACKEND_URL.replace("http", "ws") + "/ws/logs";
@@ -807,16 +990,29 @@ async function verifyMomentsVisually() {
                         if (item.verified) {
                             hasVerifiedData = true;
                             const tr = document.createElement("tr");
-                            tr.style.borderBottom = "1px solid #333";
+                            
+                            // Build path to the clip
+                            const videoStem = currentVideoPath.split('/').pop().split('\\').pop().split('.')[0];
+                            // Replace spaces and colons as done in python
+                            const safeRoundName = roundName.replace(/ /g, "_");
+                            const safeTimestamp = item.timestamp.replace(/:/g, "_");
+                            
+                            // The backend mounts assets/ as /assets/
+                            const clipUrl = `${BACKEND_URL}/assets/temp_clips_${videoStem}/verify_clips/${safeRoundName}_${safeTimestamp}.mp4`;
                             
                             tr.innerHTML = `
-                                <td style="padding: 12px; border: 1px solid #333;">${roundName}</td>
-                                <td style="padding: 12px; border: 1px solid #333; font-weight: bold;">${item.timestamp}</td>
-                                <td style="padding: 12px; border: 1px solid #333;">${item.category || "-"}</td>
-                                <td style="padding: 12px; border: 1px solid #333;">${item.landed_status || "-"}</td>
-                                <td style="padding: 12px; border: 1px solid #333;">${item.attacker_vs_defender || "-"}</td>
-                                <td style="padding: 12px; border: 1px solid #333;">${item.attack_type || "-"}</td>
-                                <td style="padding: 12px; border: 1px solid #333;">${item.defender_reaction || "-"}</td>
+                                <td><strong style="color:#e6a839">${roundName}</strong></td>
+                                <td><strong>${item.timestamp}</strong></td>
+                                <td><span style="background:#252529; padding:4px 8px; border-radius:4px; font-size:12px;">${item.category || "-"}</span></td>
+                                <td>${item.landed_status || "-"}</td>
+                                <td>${item.attacker_vs_defender || "-"}</td>
+                                <td>${item.attack_type || "-"}</td>
+                                <td>${item.defender_reaction || "-"}</td>
+                                <td style="text-align: center;">
+                                    <button class="preview-btn" onclick="openVideoModal('${clipUrl}', '${roundName} at ${item.timestamp}')">
+                                        ▶ Play
+                                    </button>
+                                </td>
                             `;
                             dbBody.appendChild(tr);
                         }
@@ -854,6 +1050,32 @@ async function verifyMomentsVisually() {
     }
 }
 
+// Modal logic
+function openVideoModal(videoUrl, title) {
+    const modal = document.getElementById("videoModal");
+    const video = document.getElementById("modalVideo");
+    const titleEl = document.getElementById("modalTitle");
+    
+    titleEl.innerText = "Preview: " + title;
+    video.src = videoUrl;
+    
+    modal.classList.add("active");
+    video.play().catch(e => console.log("Autoplay prevented", e));
+}
+
+function closeVideoModal(event) {
+    // If event is provided, make sure we clicked the overlay, not the content
+    if (event && event.target !== document.getElementById("videoModal")) {
+        return;
+    }
+    
+    const modal = document.getElementById("videoModal");
+    const video = document.getElementById("modalVideo");
+    
+    modal.classList.remove("active");
+    video.pause();
+    video.src = ""; // Clear source to stop loading
+}
 
 </script>
 
