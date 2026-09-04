@@ -30,20 +30,19 @@ If none occurred, reply: "No key moments detected."
 VERIFY_MOMENTS_MODEL = "models/gemini-3.1-pro-preview"
 
 VERIFY_MOMENTS_PROMPT = """
-You must output all three numbered sections below. Do not skip directly to the final list.
+Analyze this 2-second clip and answer each step in order:
 
-### 1. Visual Evidence (Write out each point):
-- Attacker & Defender: [Identify by shorts/torso color]
-- Action: [Punch thrown or action taken]
-- Contact: [Clean hit / Hit guard / Complete miss]
-- Defender Base & Footing: [Did feet move? Did knees buckle, or was footing solid?]
-- Referee Action: [No action / Intervening / Counting / Waving off]
+1. Physical Reaction: Did the defending fighter drop to the canvas, buckle at the knees, slip/trip, take involuntary stumbling steps, or get pinned against ropes? [YES / NO]
+2. Is this a real Key Moment or Official Event? (Knockdown, Accidental Slip to canvas, Stoppage, Stagger/Hurt, or Pinned Flurry): [YES / NO]
+If NO, state why briefly and output at the end: RESULT: [NO, null, null, null, null, null]
 
-### 2. Verdict:
-- Is this an unambiguous Key Moment (Knockdown, Stoppage, Stagger/Hurt, or Pinned Flurry)?: [YES / NO]
+If YES, complete the remaining checks:
+3. Category: [Knockdown Count / Accidental Slip / Referee Stoppage / Staggering Power Shot / Corner Pin Flurry]
+4. Contact: Did the attack land cleanly?: [Clean Hit / Guard Blocked / Missed / No Punch (Trip/Push)]
+5. Who hit whom?: [Attacker shorts/torso color] vs [Defender shorts/torso color]
+6. Attack Type: [e.g., Left Hook, Straight Right/Cross, Uppercut, Flurry, None/Push]
+7. Defender Reaction: [Fell to Canvas, Slipped/Tripped, Knees Buckled, Stumbled Backward, Pinned Against Ropes]
 
-### 3. Structured Data:
-Output this exact line at the very end:
+Output your brief observations first, then end strictly with this line:
 RESULT: [YES/NO, "Category", "Landed_Status", "Attacker vs Defender", "Attack_Type", "Defender_Reaction"]
-(If NO, output: RESULT: [NO, null, null, null, null, null])
 """
