@@ -297,11 +297,11 @@ async def find_moments(request: FindMomentsRequest):
     check_cancel = lambda: cancel_events.get(video_path_str) and cancel_events[video_path_str].is_set()
 
     try:
-        results = await asyncio.to_thread(find_key_moments_for_rounds, video_path_str, request.rounds, log_cb, check_cancel)
+        results = await asyncio.to_thread(find_key_moments_for_rounds, video_path_str, request.rounds, request.force, log_cb, check_cancel)
         data = {"key_moments": results}
         with open(cache_path, 'w') as f:
             json.dump(data, f)
-        if log_cb: log_cb("Saved key moments results to cache.")
+        if log_cb: log_cb("Saved key moments to cache.")
         return data
     except Exception as e:
         raise HTTPException(

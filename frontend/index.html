@@ -385,6 +385,10 @@
             <button id="cancelAnalyzeButton" style="display:none; background: #ff4757;" onclick="cancelTask('cancelAnalyzeButton')">Cancel</button>
         </div>
         <div style="margin-top: 15px; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="reuseExtract" style="flex: none; width: 16px; height: 16px; margin: 0; cursor: pointer;" checked>
+            <label for="reuseExtract" style="margin: 0; font-weight: normal; cursor: pointer; color: #ccc;">Use Cached Extraction</label>
+        </div>
+        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="reuseDebug" style="flex: none; width: 16px; height: 16px; margin: 0; cursor: pointer;">
             <label for="reuseDebug" style="margin: 0; font-weight: normal; cursor: pointer; color: #ccc;">Reuse OCR Log (Fast Debug)</label>
         </div>
@@ -402,7 +406,10 @@
     </div>
 
     <div id="results" class="results">
-        <h2 class="collapsible" onclick="toggleSection('roundContent', this)">Detected Rounds <span class="toggle-icon">▼</span></h2>
+        <h2 class="collapsible" onclick="toggleSection('roundContent', this)">
+            <span>Detected Rounds <span id="roundHeaderTime" style="font-size: 14px; color: #888; font-weight: normal; margin-left: 10px;"></span></span>
+            <span class="toggle-icon">▼</span>
+        </h2>
         <div id="roundContent" class="collapsible-content">
             <div id="roundCount" class="round-count"></div>
             <div id="roundList"></div>
@@ -428,7 +435,10 @@
         </div> <!-- End roundContent -->
 
         <div id="momentsResults" style="margin-top: 25px; display: none;">
-            <h3 class="collapsible" onclick="toggleSection('momentsContent', this)">Key Moments <span class="toggle-icon">▼</span></h3>
+            <h3 class="collapsible" onclick="toggleSection('momentsContent', this)">
+                <span>Key Moments <span id="momentsHeaderTime" style="font-size: 14px; color: #888; font-weight: normal; margin-left: 10px;"></span></span>
+                <span class="toggle-icon">▼</span>
+            </h3>
             <div id="momentsContent" class="collapsible-content">
                 <div id="momentsList"></div>
                 
@@ -447,7 +457,10 @@
         </div> <!-- End momentsResults -->
 
         <div id="verifiedMomentsDatabase" style="margin-top: 45px; display: none;">
-            <h2 class="collapsible" style="margin-bottom: 5px;" onclick="toggleSection('dbContent', this)">Verified Database <span class="toggle-icon">▼</span></h2>
+            <h2 class="collapsible" style="margin-bottom: 5px;" onclick="toggleSection('dbContent', this)">
+                <span>Verified Database <span id="dbHeaderTime" style="font-size: 14px; color: #888; font-weight: normal; margin-left: 10px;"></span></span>
+                <span class="toggle-icon">▼</span>
+            </h2>
             <div id="dbContent" class="collapsible-content">
                 <p style="color: #888; font-size: 14px; margin-bottom: 20px;">Structured data extracted directly from video clip analysis.</p>
                 <div style="overflow-x: auto; padding-bottom: 20px;">
@@ -533,6 +546,14 @@ function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return String(minutes).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+}
+
+function formatDuration(ms) {
+    const s = Math.round(ms / 1000);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${m}m ${secs}s`;
 }
 
 function displayRounds(rounds, verified=false, originalRounds=null) {
@@ -675,6 +696,7 @@ async function cancelTask(cancelBtnId) {
 }
 
 async function analyzeVideo() {
+    const startTime = performance.now();
     const path = document.getElementById("videoPath").value.trim();
     const button = document.getElementById("analyzeButton");
     const status = document.getElementById("status");
@@ -688,13 +710,13 @@ async function analyzeVideo() {
         return;
     }
 
-    let force = true;
+    let force = !document.getElementById("reuseExtract").checked;
     let reuseDebug = document.getElementById("reuseDebug") ? document.getElementById("reuseDebug").checked : false;
     const cache = await checkCache(path);
-    if (cache.extract_exists) {
-        if (confirm("Cached extraction found for this video. Do you want to load the previous results? (Click Cancel to re-extract via OCR)")) {
-            force = false;
-        }
+    if (!force && cache.extract_exists) {
+        // use cache
+    } else {
+        force = true; // if checkbox is checked but no cache exists
     }
 
     button.disabled = true;
@@ -746,11 +768,16 @@ async function analyzeVideo() {
         cancelBtn.style.display = "none";
         cancelBtn.disabled = false;
         cancelBtn.innerText = "Cancel";
+        
+        const elapsed = performance.now() - startTime;
+        document.getElementById("roundHeaderTime").innerText = `[Extracted in ${formatDuration(elapsed)}]`;
+        
         loadRecentVideos(); // Refresh the list with the newly added path
     }
 }
 
 async function verifyVideo() {
+    const startTime = performance.now();
     const button = document.getElementById("verifyButton");
     const status = document.getElementById("status");
 
@@ -807,10 +834,15 @@ async function verifyVideo() {
         cancelBtn.style.display = "none";
         cancelBtn.disabled = false;
         cancelBtn.innerText = "Cancel";
+        
+        const elapsed = performance.now() - startTime;
+        const currentText = document.getElementById("roundHeaderTime").innerText;
+        document.getElementById("roundHeaderTime").innerText = `${currentText} [Verified in ${formatDuration(elapsed)}]`;
     }
 }
 
 async function findMoments() {
+    const startTime = performance.now();
     const button = document.getElementById("momentsButton");
     const status = document.getElementById("status");
     const momentsResults = document.getElementById("momentsResults");
@@ -909,10 +941,14 @@ async function findMoments() {
         cancelBtn.style.display = "none";
         cancelBtn.disabled = false;
         cancelBtn.innerText = "Cancel";
+        
+        const elapsed = performance.now() - startTime;
+        document.getElementById("momentsHeaderTime").innerText = `[Took ${formatDuration(elapsed)}]`;
     }
 }
 
 async function verifyMomentsVisually() {
+    const startTime = performance.now();
     const button = document.getElementById("verifyMomentsButton");
     const status = document.getElementById("status");
     const dbContainer = document.getElementById("verifiedMomentsDatabase");
@@ -1047,6 +1083,9 @@ async function verifyMomentsVisually() {
         cancelBtn.style.display = "none";
         cancelBtn.disabled = false;
         cancelBtn.innerText = "Cancel";
+        
+        const elapsed = performance.now() - startTime;
+        document.getElementById("dbHeaderTime").innerText = `[Verified in ${formatDuration(elapsed)}]`;
     }
 }
 

@@ -146,7 +146,7 @@ def map_timestamp_to_global(clip_ts: str, round_start_sec: int) -> str:
     total_sec += round_start_sec
     return format_sec(total_sec)
 
-def find_key_moments_for_rounds(video_path: str, rounds_list: list, log_cb=None, check_cancel=None) -> dict:
+def find_key_moments_for_rounds(video_path: str, rounds_list: list, force: bool = False, log_cb=None, check_cancel=None) -> dict:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY environment variable is not set. Please set it in .env")
@@ -189,7 +189,7 @@ def find_key_moments_for_rounds(video_path: str, rounds_list: list, log_cb=None,
         responses_file = os.path.join(round_dir, "responses.md")
         
         # Check round-level cache
-        if os.path.exists(responses_file):
+        if not force and os.path.exists(responses_file):
             if log_cb: log_cb(f"Found cached responses for Round {round_num}. Parsing directly...")
             with open(responses_file, "r") as f:
                 cached_responses = f.read()

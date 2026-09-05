@@ -135,7 +135,10 @@ class RoundExtractor:
         reads, max_clk = [], 0
         
         video_stem = os.path.splitext(os.path.basename(self.video_path))[0]
-        debug_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", f"debug_ocr_{video_stem}.txt")
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        assets_dir = os.path.join(base_dir, "assets")
+        os.makedirs(assets_dir, exist_ok=True)
+        debug_file_path = os.path.join(assets_dir, f"debug_ocr_{video_stem}.txt")
         
         if reuse_debug_log and os.path.exists(debug_file_path):
             if log_cb: log_cb("Fast Debug mode: Parsing existing debug_ocr.txt...")
@@ -157,7 +160,10 @@ class RoundExtractor:
             if not dur or dur <= 0:
                 dur = max([s for r, s, c, t in reads]) + 300 if reads else 3600
         else:
-            if log_cb: log_cb("Testing OCR engine on the first frame...")
+            if reuse_debug_log:
+                if log_cb: log_cb("Fast Debug mode requested, but cache not found. Generating new OCR log...")
+            else:
+                if log_cb: log_cb("Testing OCR engine on the first frame...")
             ret, frame = cap.read()
             if ret:
                 try:

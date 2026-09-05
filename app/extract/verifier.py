@@ -17,7 +17,7 @@ def get_model(log_cb=None):
         if log_cb: log_cb("Loading audio verification model... (this may take a moment)")
         
         # We will cache it inside the assets folder
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         cache_dir = os.path.join(base_dir, "assets", "models")
         os.makedirs(cache_dir, exist_ok=True)
         
